@@ -1,0 +1,27 @@
+{
+  "name": "pdf-forge",
+  "version": "0.1.0",
+  "description": "An AI-driven engine that designs sellable PDF templates and lists them for sale, either through a self-hosted Stripe storefront or export-ready packages for marketplaces like Etsy and Gumroad.",
+  "type": "module",
+  "bin": {
+    "forge": "src/cli.js"
+  },
+  "scripts": {
+    "generate": "node src/cli.js generate",
+    "list": "node src/cli.js list",
+    "export": "node src/cli.js export",
+    "serve": "node src/cli.js serve",
+    "seed": "node src/cli.js seed",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "pdfkit": "^0.15.1",
+    "stripe": "^17.5.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
