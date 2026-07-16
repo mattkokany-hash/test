@@ -1,0 +1,10 @@
+# polymm core has ZERO third-party dependencies — it runs on the Python 3.10+
+# standard library alone (math, random, dataclasses, typing).
+#
+# The backtester, tests, and demo all run with just `python3`.
+#
+# Optional, only if you later build a LIVE adapter (not included here):
+#   websockets        # spot / CLOB streaming
+#   httpx             # Gamma / CLOB REST calls
+#   py-clob-client    # Polymarket CLOB client
+#   pytest            # if you prefer it over the bundled run_tests.py
