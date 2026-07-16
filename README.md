@@ -67,10 +67,12 @@ polymm/
   hedge.py       delta netting + partial-hedge recommendations
   strategy.py    per-tick orchestrator (venue-agnostic)
   backtest.py    synthetic overlapping-window world with an adverse-selection knob
-  datafeed.py    feed/discovery interfaces + a Polymarket adapter STUB
-tests/           34 stdlib tests (also runnable under pytest)
+  datafeed.py    generic feed/discovery interfaces (live adapter lives in live/)
+  live/          real Polymarket adapter: gamma, spot, clob, runner
+tests/           45 stdlib tests (also runnable under pytest)
 run_tests.py     zero-dependency test runner
 run_backtest.py  demo: baseline run + toxicity sweep + kill-switch check
+run_paper.py     paper-trade the engine against LIVE books (no orders, no keys)
 ```
 
 ## Run it
@@ -97,23 +99,65 @@ The sweep is the honest part: crank up `toxicity` (how informed the flow hitting
 your quotes is) and the edge flips to a loss and the kill switch fires. **That is
 what real adverse selection does to this style of strategy.**
 
-## Wiring it to a real venue
+## The live Polymarket adapter (`polymm/live/`)
 
-`strategy.MarketMaker` is deliberately venue-agnostic — it consumes
-`(spot, now, [MarketState])` and emits desired quotes + a hedge recommendation.
-`backtest.py` is one adapter over a synthetic world. A live Polymarket adapter
-(`datafeed.PolymarketAdapter`, currently a stub) would supply:
+The engine is venue-agnostic; `polymm/live/` is a working adapter that plugs it
+into real Polymarket data. It is **dependency-free except for live order
+routing**, and its default mode is **paper trading against the live book**.
 
-1. **Market discovery** — active up/down windows, their strikes, resolve times
-   (Gamma API).
-2. **A spot feed** — a low-latency price for the underlying (CEX websocket or a
-   Pyth/Chainlink oracle) to drive the model.
-3. **Order routing** — translate quotes into post-only CLOB orders and reconcile
-   fills back through `record_fill` / `settle`.
+| Module | Job |
+|---|---|
+| `live/gamma.py` | Discover active crypto Up/Down windows via the Gamma API — token ids, start/resolve times, asset |
+| `live/spot.py` | Underlying spot feed (Binance primary, Coinbase fallback, same `price()` interface for a future websocket) |
+| `live/clob.py` | Read the real CLOB book; `PaperExecutionClient` (simulated fills vs live depth) and `LiveExecutionClient` (real post-only orders via `py-clob-client`) |
+| `live/runner.py` | `LiveRunner` poll loop: shared inventory + global kill switches, per-asset vol, strike capture at window open, fill reconciliation, settlement |
 
-That layer needs credentials, rate-limit handling, and careful fill
-reconciliation, so it belongs in a separately reviewed deployment — not bundled
-with the modelling core.
+**Paper trade against live liquidity — no keys, no orders:**
+
+```bash
+python3 run_paper.py --cycles 50 --interval 3 --assets BTC,ETH
+```
+
+It discovers real markets, pulls the real book and real spot, quotes through the
+risk engine, and simulates fills against actual depth.
+
+**Two design points worth knowing:**
+
+- **No naked shorts.** Polymarket won't let you sell a token you don't hold, so
+  the runner expresses *"sell YES @ a"* as *"buy NO @ (1 − a)"*. A NO fill is
+  booked as a YES sell at `1 − price`, so inventory/PnL math matches the backtest.
+- **Strike capture.** The reference price for a window isn't a clean Gamma field,
+  so the runner captures it from the spot feed at window open. Markets joined
+  mid-window without a known strike are skipped rather than guessed.
+
+### Going live (deliberate, opt-in)
+
+Live order routing needs `py-clob-client` and credentials read **only** from the
+environment (never source):
+
+```bash
+export POLY_PRIVATE_KEY=...        # wallet key (L1 signing)
+export POLY_API_KEY=...            # CLOB API creds (L2)
+export POLY_API_SECRET=...
+export POLY_API_PASSPHRASE=...
+export POLY_FUNDER=...             # optional proxy/funder address
+```
+
+```python
+from polymm.config import StrategyConfig
+from polymm.live import LiveRunner, LiveExecutionClient
+
+runner = LiveRunner(StrategyConfig(), execution=LiveExecutionClient())
+runner.run(interval_s=2.0)         # posts real post-only maker orders
+```
+
+`LiveExecutionClient` fails loudly if the library or any credential is missing,
+so you can't accidentally go live half-configured.
+
+> **Network note:** the public Gamma/CLOB/exchange endpoints sit behind
+> Cloudflare and block many datacenter IPs (you'll see HTTP 403 / code 1010).
+> Run from a network/region allowed to reach them; the adapter logs the block
+> and keeps polling rather than crashing.
 
 ## Before you even think about going live
 

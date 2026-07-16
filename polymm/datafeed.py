@@ -43,27 +43,20 @@ class MarketDiscovery(Protocol):
 
 
 class PolymarketAdapter:
-    """Stub for a live Polymarket 'Up/Down' integration.
+    """Deprecated placeholder -- the real live adapter now lives in ``polymm.live``.
 
-    A real implementation would:
+    Use those instead:
 
-    * discover active hourly/short up-down markets via the Gamma API, reading
-      each market's reference price and resolution timestamp into ``MarketState``;
-    * subscribe to the CLOB order book for best bid/ask and depth;
-    * subscribe to a low-latency spot feed for the underlying (the same asset the
-      market resolves on) to drive ``up_probability``;
-    * translate ``QuotingEngine`` output into post-only CLOB orders and reconcile
-      fills back through ``MarketMaker.record_fill`` / ``settle``.
+    * ``polymm.live.GammaClient``      -- market discovery
+    * ``polymm.live.MultiSourceSpot``  -- underlying spot feed
+    * ``polymm.live.ClobBook`` / ``PaperExecutionClient`` / ``LiveExecutionClient``
+    * ``polymm.live.LiveRunner``       -- the paper/live poll loop
 
-    None of that is implemented here on purpose: live order routing needs
-    credentials, rate-limit handling, and careful reconciliation that belong in a
-    separately reviewed, well-tested deployment layer -- not bundled with the
-    modelling core.
+    See ``run_paper.py`` for a no-credentials paper-trading entry point.
     """
 
     def __init__(self, *_, **__):
         raise NotImplementedError(
-            "PolymarketAdapter is a documentation stub. Implement market "
-            "discovery, book subscription, a spot feed, and order routing "
-            "before going live, and validate with backtest.run_backtest first."
+            "PolymarketAdapter has been superseded by the polymm.live package. "
+            "Use polymm.live.LiveRunner (paper mode by default); see run_paper.py."
         )

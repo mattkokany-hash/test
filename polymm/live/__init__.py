@@ -1,0 +1,28 @@
+"""Live / paper Polymarket adapter for the polymm engine.
+
+Layers, all dependency-free except live order routing:
+
+* ``gamma``  -- market discovery (active Up/Down windows, token ids, timings)
+* ``spot``   -- underlying spot feed (Binance primary, Coinbase fallback)
+* ``clob``   -- order-book reads + paper/live execution clients
+* ``runner`` -- the poll loop that wires it to the quoting + risk core
+
+Default is paper mode: real book, real spot, simulated fills, no credentials.
+Live order routing (``clob.LiveExecutionClient``) requires ``py-clob-client``
+and environment credentials, and is intentionally opt-in.
+"""
+
+from .gamma import GammaClient, PolyMarket
+from .spot import SpotSource, BinanceSpot, CoinbaseSpot, MultiSourceSpot
+from .clob import (
+    ClobBook, Fill, ExecutionClient, PaperExecutionClient, LiveExecutionClient,
+)
+from .runner import LiveRunner, TrackedMarket, OrderRec
+
+__all__ = [
+    "GammaClient", "PolyMarket",
+    "SpotSource", "BinanceSpot", "CoinbaseSpot", "MultiSourceSpot",
+    "ClobBook", "Fill", "ExecutionClient",
+    "PaperExecutionClient", "LiveExecutionClient",
+    "LiveRunner", "TrackedMarket", "OrderRec",
+]

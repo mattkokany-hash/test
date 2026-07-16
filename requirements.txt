@@ -3,8 +3,13 @@
 #
 # The backtester, tests, and demo all run with just `python3`.
 #
-# Optional, only if you later build a LIVE adapter (not included here):
-#   websockets        # spot / CLOB streaming
-#   httpx             # Gamma / CLOB REST calls
-#   py-clob-client    # Polymarket CLOB client
+# The live adapter (polymm/live/) does market discovery, book reads, and the
+# spot feed with the standard library too (urllib) -- paper trading needs NO
+# third-party packages.
+#
+# Optional, ONLY for placing real live orders (polymm.live.LiveExecutionClient):
+#   py-clob-client    # Polymarket CLOB signing + order routing
+#
+# Optional, nice-to-haves:
+#   websockets        # lower-latency spot / CLOB streaming (drop-in later)
 #   pytest            # if you prefer it over the bundled run_tests.py
