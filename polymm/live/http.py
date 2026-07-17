@@ -19,7 +19,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-__all__ = ["HttpError", "get_json", "post_json", "make_ssl_context"]
+__all__ = ["HttpError", "get_json", "post_json", "post_form", "make_ssl_context"]
 
 _DEFAULT_TIMEOUT = 10.0
 
@@ -72,4 +72,12 @@ def post_json(url: str, payload: dict, *, headers: dict[str, str] | None = None,
               timeout: float = _DEFAULT_TIMEOUT) -> dict | list:
     body = json.dumps(payload).encode("utf-8")
     hdrs = {"Content-Type": "application/json", **(headers or {})}
+    return _request(url, data=body, headers=hdrs, method="POST", timeout=timeout)
+
+
+def post_form(url: str, fields: dict, *, headers: dict[str, str] | None = None,
+              timeout: float = _DEFAULT_TIMEOUT) -> dict | list:
+    """POST application/x-www-form-urlencoded (OAuth token endpoints)."""
+    body = urllib.parse.urlencode(fields).encode("utf-8")
+    hdrs = {"Content-Type": "application/x-www-form-urlencoded", **(headers or {})}
     return _request(url, data=body, headers=hdrs, method="POST", timeout=timeout)

@@ -21,6 +21,9 @@ from .clob import (
     RealisticPaperExecutionClient, DryRunExecutionClient, LiveExecutionClient,
 )
 from .runner import LiveRunner, TrackedMarket, OrderRec
+from .bybit_oauth import OAuthConfig, BybitOAuth, generate_pkce, credential_path
+from .bybit_auth import BybitAuth, sign_v5
+from .bybit import BybitPerpsBook, BybitExecutionClient, BybitPerpsRunner
 
 __all__ = [
     "GammaClient", "PolyMarket",
@@ -29,4 +32,8 @@ __all__ = [
     "PaperExecutionClient", "RealisticPaperExecutionClient",
     "DryRunExecutionClient", "LiveExecutionClient",
     "LiveRunner", "TrackedMarket", "OrderRec",
+    # Bybit perps
+    "OAuthConfig", "BybitOAuth", "generate_pkce", "credential_path",
+    "BybitAuth", "sign_v5",
+    "BybitPerpsBook", "BybitExecutionClient", "BybitPerpsRunner",
 ]

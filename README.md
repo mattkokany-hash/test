@@ -69,7 +69,7 @@ polymm/
   backtest.py    synthetic overlapping-window world with an adverse-selection knob
   datafeed.py    generic feed/discovery interfaces (live adapter lives in live/)
   live/          real Polymarket adapter: gamma, spot, clob, runner
-tests/           49 stdlib tests (also runnable under pytest)
+tests/           63 stdlib tests (also runnable under pytest)
 run_tests.py     zero-dependency test runner
 run_backtest.py  demo: baseline run + toxicity sweep + kill-switch check
 run_paper.py     paper-trade the engine against LIVE books (no orders, no keys)
@@ -172,6 +172,39 @@ so you can't accidentally go live half-configured.
 > Cloudflare and block many datacenter IPs (you'll see HTTP 403 / code 1010).
 > Run from a network/region allowed to reach them; the adapter logs the block
 > and keeps polling rather than crashing.
+
+## Bybit perpetuals via OAuth — the strategy, adapted
+
+Bybit has no Polymarket-style binary "Up/Down" markets, so the strategy is
+adapted for continuous **linear perpetuals**: the fair value becomes the mid/
+index (no terminal-probability model), and quoting is Avellaneda–Stoikov around
+an inventory-skewed reservation price. Inventory, risk, and the EWMA vol
+estimator are reused unchanged — only the fair value and quote geometry differ
+(`polymm/perps.py`).
+
+Connection uses the Bybit **OAuth** flow (a Python port of `bybit-exchange/skills`):
+
+```bash
+python3 run_bybit_oauth.py --env testnet   # open link, authorize, paste code
+#   -> saves AI-subaccount creds 0600 to ~/.bybit/oauth_token.json (never chat)
+python3 run_bybit_paper.py --cycles 20     # dry-run: quotes vs the live book, no orders
+python3 run_bybit_paper.py --testnet-live  # real orders on TESTNET (needs creds)
+```
+
+- `live/bybit_oauth.py` — PKCE + token exchange/refresh, AI-subaccount selection,
+  0600 credential file, `ret_code=20039` (2FA) treated as terminal.
+- `live/bybit_auth.py` — v5 HMAC-SHA256 request signing.
+- `live/bybit.py` — public book, post-only order routing (**dry-run + testnet by
+  default**), and `BybitPerpsRunner`.
+
+Mainnet real-money is a further deliberate step you take yourself (`BybitAuth(testnet=False)`);
+there is no one-flag mainnet path, and OAuth keys are read only from
+`~/.bybit/` on your machine — never pasted into a chat.
+
+> These Bybit paths are written to spec but **untested against the live venue**
+> from this repo's sandbox (Bybit CDN-blocks datacenter IPs, HTTP 403). The pure
+> logic — PKCE, signing, credential handling, perps quoting — is unit-tested
+> offline; validate the network paths on your own machine, testnet first.
 
 ## Before you even think about going live
 
