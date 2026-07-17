@@ -1,0 +1,405 @@
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel-2:#1b222c; --border:#242c38;
+  --ink:#e6edf3; --muted:#8b98a9; --faint:#5b6675;
+  --accent:#e3b341; --accent-soft:rgba(227,179,65,.14);
+  --pos:#3fb950; --neg:#f85149; --warn:#d29922;
+  --grid:rgba(139,152,169,.16);
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;
+  --mono:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:light){
+  :root{
+    --bg:#f5f6f8; --panel:#ffffff; --panel-2:#f0f2f5; --border:#e0e4ea;
+    --ink:#161b22; --muted:#5b6675; --faint:#8a94a3;
+    --accent:#b7791f; --accent-soft:rgba(183,121,31,.12);
+    --pos:#1a7f37; --neg:#cf222e; --warn:#9a6700; --grid:rgba(91,102,117,.16);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1117; --panel:#161b22; --panel-2:#1b222c; --border:#242c38;
+  --ink:#e6edf3; --muted:#8b98a9; --faint:#5b6675;
+  --accent:#e3b341; --accent-soft:rgba(227,179,65,.14);
+  --pos:#3fb950; --neg:#f85149; --warn:#d29922; --grid:rgba(139,152,169,.16);
+}
+:root[data-theme="light"]{
+  --bg:#f5f6f8; --panel:#ffffff; --panel-2:#f0f2f5; --border:#e0e4ea;
+  --ink:#161b22; --muted:#5b6675; --faint:#8a94a3;
+  --accent:#b7791f; --accent-soft:rgba(183,121,31,.12);
+  --pos:#1a7f37; --neg:#cf222e; --warn:#9a6700; --grid:rgba(91,102,117,.16);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;line-height:1.45}
+.wrap{max-width:1160px;margin:0 auto;padding:22px 20px 60px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* --- top bar --- */
+.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 16px;
+  padding-bottom:16px;border-bottom:1px solid var(--border)}
+.brand{font-weight:700;font-size:18px;letter-spacing:-.01em}
+.brand b{color:var(--accent)}
+.sub{color:var(--muted);font-size:12.5px}
+.chips{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chip{font-family:var(--mono);font-size:11px;letter-spacing:.04em;
+  padding:4px 9px;border-radius:999px;border:1px solid var(--border);
+  background:var(--panel-2);color:var(--muted);text-transform:uppercase}
+.chip.mode{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+.chip.ok{color:var(--pos);border-color:color-mix(in oklab,var(--pos) 45%,var(--border))}
+.chip.halt{color:var(--neg);border-color:color-mix(in oklab,var(--neg) 50%,var(--border));
+  background:color-mix(in oklab,var(--neg) 12%,transparent)}
+.tbtn{cursor:pointer;font-family:var(--mono);font-size:11px;padding:4px 9px;
+  border-radius:999px;border:1px solid var(--border);background:var(--panel-2);
+  color:var(--muted)}
+.tbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* --- kpi row --- */
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:18px 0}
+.kpi{background:var(--panel);border:1px solid var(--border);border-radius:10px;
+  padding:12px 13px}
+.kpi .lab{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--muted)}
+.kpi .val{font-family:var(--mono);font-size:22px;font-weight:600;margin-top:6px;
+  letter-spacing:-.01em}
+.kpi .foot{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:3px}
+.pos{color:var(--pos)} .neg{color:var(--neg)} .warnc{color:var(--warn)}
+
+/* --- panels --- */
+.grid{display:grid;gap:14px}
+.row2{grid-template-columns:1.35fr 1fr}
+.row2b{grid-template-columns:1fr 1.25fr}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;
+  padding:15px 16px}
+.phead{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
+.ptitle{font-size:13.5px;font-weight:650;letter-spacing:-.01em}
+.phead .h{color:var(--muted);font-size:11.5px;margin-left:auto}
+.pnote{color:var(--muted);font-size:11.5px;margin:0 0 10px}
+svg{display:block;width:100%;overflow:visible}
+.axis{fill:var(--faint);font-family:var(--mono);font-size:10px}
+.gl{stroke:var(--grid);stroke-width:1}
+
+/* --- risk bars --- */
+.risk{display:flex;flex-direction:column;gap:14px;margin-top:4px}
+.rrow .rlab{display:flex;justify-content:space-between;font-size:12px;
+  color:var(--muted);margin-bottom:6px}
+.rlab .rv{font-family:var(--mono);color:var(--ink)}
+.track{height:9px;border-radius:6px;background:var(--panel-2);
+  border:1px solid var(--border);overflow:hidden}
+.fill{height:100%;border-radius:6px;background:var(--pos)}
+.fill.warn{background:var(--warn)} .fill.crit{background:var(--neg)}
+.kill{margin-top:16px;padding:11px 12px;border-radius:9px;font-size:12.5px;
+  display:flex;gap:9px;align-items:center;border:1px solid var(--border);
+  background:var(--panel-2)}
+.dot{width:9px;height:9px;border-radius:50%;flex:none}
+.dot.g{background:var(--pos)} .dot.r{background:var(--neg)}
+
+/* --- table --- */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{text-align:right;padding:6px 8px;border-bottom:1px solid var(--border)}
+th{color:var(--muted);font-weight:600;font-size:10.5px;letter-spacing:.05em;
+  text-transform:uppercase}
+td:first-child,th:first-child{text-align:left}
+td.num{font-family:var(--mono)}
+.tag{font-family:var(--mono);font-size:10.5px;padding:2px 7px;border-radius:5px}
+.tag.w{color:var(--pos);background:color-mix(in oklab,var(--pos) 14%,transparent)}
+.tag.l{color:var(--neg);background:color-mix(in oklab,var(--neg) 14%,transparent)}
+
+/* --- tooltip --- */
+.tip{position:fixed;pointer-events:none;z-index:20;opacity:0;transition:opacity .08s;
+  background:var(--panel);border:1px solid var(--border);border-radius:8px;
+  padding:7px 9px;font-family:var(--mono);font-size:11.5px;color:var(--ink);
+  box-shadow:0 6px 22px rgba(0,0,0,.28);white-space:nowrap}
+.tip b{color:var(--accent)}
+.foot{color:var(--faint);font-size:11.5px;margin-top:22px;line-height:1.6;
+  border-top:1px solid var(--border);padding-top:14px}
+.foot b{color:var(--muted);font-weight:600}
+@media (max-width:820px){
+  .kpis{grid-template-columns:repeat(3,1fr)}
+  .row2,.row2b{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <div>
+      <div class="brand"><b>polymm</b> · market-making monitor</div>
+      <div class="sub" id="sub"></div>
+    </div>
+    <div class="chips">
+      <span class="chip mode" id="modechip">BACKTEST</span>
+      <span class="chip" id="statechip">—</span>
+      <button class="tbtn" id="themebtn" type="button">theme</button>
+    </div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="grid" id="livewrap" style="margin-bottom:14px;display:none">
+    <div class="panel">
+      <div class="phead"><span class="ptitle">Live market snapshot</span>
+        <span class="h" id="livemeta"></span></div>
+      <p class="pnote">Real spot captured live; the engine's model fair value and the two-sided quote it would post right now for a fresh 5-minute Up/Down window (at the money, flat inventory).</p>
+      <div style="overflow-x:auto">
+        <table><thead><tr><th>Asset</th><th>Spot</th><th>Est. vol</th>
+          <th>P(Up)</th><th>Δ / token</th><th>Bid</th><th>Ask</th><th>Edge</th></tr></thead>
+        <tbody id="livebody"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-bottom:14px">
+    <div class="panel">
+      <div class="phead"><span class="ptitle">Equity curve</span>
+        <span class="h">mark-to-model equity across the session</span></div>
+      <p class="pnote">Cumulative PnL over backtest cycles. Endpoint marks final realized+unrealized.</p>
+      <svg id="equity" viewBox="0 0 900 260" preserveAspectRatio="none"
+        role="img" aria-label="Equity curve over the session"></svg>
+    </div>
+  </div>
+
+  <div class="grid row2" style="margin-bottom:14px">
+    <div class="panel">
+      <div class="phead"><span class="ptitle">Per-window PnL</span>
+        <span class="h">distribution across graded windows</span></div>
+      <p class="pnote">Each settled window's realized PnL. Green right of zero (wins), red left (losses).</p>
+      <svg id="hist" viewBox="0 0 560 240" role="img"
+        aria-label="Histogram of per-window PnL"></svg>
+    </div>
+    <div class="panel">
+      <div class="phead"><span class="ptitle">Adverse-selection sweep</span>
+        <span class="h">edge vs informed flow</span></div>
+      <p class="pnote">Session PnL as counterparty flow gets more informed. The edge collapses and the kill switch fires.</p>
+      <svg id="sweep" viewBox="0 0 560 240" role="img"
+        aria-label="Session PnL by toxicity level"></svg>
+    </div>
+  </div>
+
+  <div class="grid row2b">
+    <div class="panel">
+      <div class="phead"><span class="ptitle">Risk &amp; kill switches</span></div>
+      <p class="pnote">Live utilization against configured limits. Bars turn amber past 70%, red past 90%.</p>
+      <div class="risk" id="risk"></div>
+      <div class="kill" id="kill"></div>
+    </div>
+    <div class="panel">
+      <div class="phead"><span class="ptitle">Recent windows</span>
+        <span class="h">last 14 settled</span></div>
+      <div style="overflow-x:auto">
+        <table><thead><tr><th>#</th><th>Realized PnL</th><th>Outcome</th></tr></thead>
+        <tbody id="recent"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot" id="foot"></div>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+const DATA = {"live": {"ts": "2026-07-17T09:49Z", "source": "live spot \u00b7 Crypto.com ticker (\u2248 Bybit)", "markets": [{"asset": "BTC", "last": 62997.6, "vol_pct": 2.1270754044921403, "fair": 0.4998232124406915, "delta": 450.1304358704321, "bid": 0.489, "ask": 0.511}, {"asset": "ETH", "last": 1832.98, "vol_pct": 2.3880378193178293, "fair": 0.4998015230804119, "delta": 400.9406160679455, "bid": 0.489, "ask": 0.511}]}, "mode": "BACKTEST \u00b7 synthetic", "generated": "2026-07-17 09:51", "params": {"steps": 20000, "window_len_s": 300.0, "stagger_s": 60.0, "true_sigma": 0.0009, "toxicity": 0.6, "fee_bps": 20.0}, "stats": {"realized_pnl": 1883.34, "win_rate": 0.5719, "sharpe": 3.68, "max_drawdown": 709.75, "n_fills": 14725, "n_windows": 334, "fees_paid": 28.74, "halted": false, "halt_reason": ""}, "equity": [[0, 0.03], [55, 5.29], [111, -9.32], [166, -52.68], [222, -97.88], [277, -117.31], [333, -103.3], [388, -88.05], [444, -30.96], [499, -181.25], [555, -176.77], [611, -132.48], [666, -76.17], [722, -163.56], [777, -136.46], [833, -191.92], [888, -215.6], [944, -218.5], [999, -259.01], [1055, -244.5], [1111, -327.06], [1166, -259.39], [1222, -249.6], [1277, -292.73], [1333, -236.76], [1388, -372.84], [1444, -131.08], [1500, -118.25], [1555, -278.47], [1611, -291.89], [1666, -270.29], [1722, -282.01], [1777, -260.65], [1833, -255.75], [1888, -86.56], [1944, -78.83], [2000, -86.31], [2055, -85.36], [2111, -142.33], [2166, -136.84], [2222, -126.88], [2277, -115.01], [2333, -128.92], [2388, -111.57], [2444, -107.93], [2500, -139.07], [2555, -124.67], [2611, -144.11], [2666, -137.23], [2722, -142.74], [2777, -128.1], [2833, -348.19], [2888, -356.65], [2944, -294.36], [3000, -257.32], [3055, -404.22], [3111, -466.84], [3166, -444.97], [3222, -554.97], [3277, -556.34], [3333, -518.94], [3388, -539.79], [3444, -483.09], [3500, -362.85], [3555, -338.73], [3611, -322.16], [3666, -293.88], [3722, -298.72], [3777, -422.28], [3833, -377.92], [3888, -320.85], [3944, -173.17], [4000, -336.75], [4055, -360.61], [4111, -271.11], [4166, -164.12], [4222, -23.0], [4277, -14.43], [4333, -4.55], [4388, 4.78], [4444, -86.59], [4500, 63.23], [4555, 75.77], [4611, 92.43], [4666, 173.33], [4722, 322.34], [4777, 368.53], [4833, 367.99], [4888, 382.89], [4944, 370.4], [5000, 317.28], [5055, 328.11], [5111, 404.9], [5166, 411.1], [5222, 428.51], [5277, 374.17], [5333, 364.68], [5388, 470.01], [5444, 521.92], [5500, 571.12], [5555, 588.33], [5611, 520.07], [5666, 589.95], [5722, 649.9], [5777, 673.28], [5833, 711.84], [5888, 668.55], [5944, 675.16], [6000, 686.89], [6055, 750.44], [6111, 756.55], [6166, 806.59], [6222, 852.84], [6277, 878.47], [6333, 916.67], [6388, 837.39], [6444, 817.06], [6500, 812.55], [6555, 825.96], [6611, 812.87], [6666, 790.48], [6722, 783.09], [6777, 797.39], [6833, 797.96], [6888, 815.78], [6944, 733.65], [7000, 726.17], [7055, 689.08], [7111, 652.84], [7166, 616.99], [7222, 506.06], [7277, 573.4], [7333, 506.58], [7388, 570.4], [7444, 509.47], [7500, 483.08], [7555, 465.62], [7611, 405.76], [7666, 458.82], [7722, 512.78], [7777, 539.81], [7833, 632.56], [7888, 821.42], [7944, 845.74], [8000, 861.69], [8055, 883.26], [8111, 830.88], [8166, 832.82], [8222, 862.41], [8277, 894.89], [8333, 754.74], [8388, 728.33], [8444, 731.7], [8500, 731.49], [8555, 762.1], [8611, 802.07], [8666, 840.85], [8722, 815.71], [8777, 919.84], [8833, 957.52], [8888, 918.24], [8944, 960.92], [9000, 1002.87], [9055, 981.2], [9111, 984.5], [9166, 977.6], [9222, 968.58], [9277, 947.97], [9333, 997.56], [9388, 898.01], [9444, 858.48], [9499, 828.68], [9555, 772.66], [9611, 746.06], [9666, 685.61], [9722, 597.54], [9777, 649.09], [9833, 805.86], [9888, 871.29], [9944, 922.74], [9999, 920.2], [10055, 928.81], [10111, 942.06], [10166, 926.01], [10222, 929.45], [10277, 700.88], [10333, 826.2], [10388, 737.18], [10444, 943.32], [10499, 750.12], [10555, 813.91], [10611, 808.51], [10666, 806.48], [10722, 827.64], [10777, 916.12], [10833, 962.6], [10888, 979.38], [10944, 989.02], [10999, 1004.85], [11055, 1029.96], [11111, 955.4], [11166, 1069.12], [11222, 1067.53], [11277, 1116.67], [11333, 1068.57], [11388, 1000.26], [11444, 985.13], [11499, 1006.29], [11555, 986.25], [11611, 828.6], [11666, 875.57], [11722, 942.29], [11777, 960.52], [11833, 922.17], [11888, 865.29], [11944, 929.8], [11999, 914.11], [12055, 922.31], [12111, 911.38], [12166, 873.83], [12222, 847.41], [12277, 761.29], [12333, 801.9], [12388, 688.24], [12444, 687.16], [12499, 713.55], [12555, 714.34], [12611, 695.42], [12666, 635.32], [12722, 630.22], [12777, 585.98], [12833, 582.47], [12888, 553.61], [12944, 668.46], [12999, 682.33], [13055, 692.99], [13111, 702.3], [13166, 724.35], [13222, 734.38], [13277, 734.05], [13333, 739.74], [13388, 706.51], [13444, 710.98], [13499, 721.97], [13555, 770.05], [13611, 827.16], [13666, 843.84], [13722, 863.25], [13777, 772.8], [13833, 874.06], [13888, 706.63], [13944, 693.74], [13999, 1041.34], [14055, 1118.55], [14111, 1148.63], [14166, 1138.21], [14222, 1104.43], [14277, 1111.57], [14333, 1117.13], [14388, 1111.91], [14444, 1031.61], [14499, 1119.61], [14555, 997.4], [14611, 980.02], [14666, 975.7], [14722, 894.42], [14777, 881.87], [14833, 863.29], [14888, 932.55], [14944, 858.61], [14999, 716.53], [15055, 808.21], [15111, 727.53], [15166, 703.24], [15222, 665.44], [15277, 608.46], [15333, 550.87], [15388, 520.02], [15444, 526.32], [15499, 535.91], [15555, 574.88], [15611, 783.01], [15666, 847.95], [15722, 953.69], [15777, 958.88], [15833, 971.8], [15888, 938.78], [15944, 936.83], [15999, 930.34], [16055, 888.69], [16111, 930.41], [16166, 894.64], [16222, 852.66], [16277, 835.36], [16333, 772.35], [16388, 790.25], [16444, 943.0], [16499, 949.36], [16555, 959.71], [16611, 974.57], [16666, 959.88], [16722, 929.0], [16777, 1010.26], [16833, 944.4], [16888, 1047.74], [16944, 1052.84], [16999, 1228.0], [17055, 1277.19], [17111, 1308.6], [17166, 1404.96], [17222, 1440.99], [17277, 1415.76], [17333, 1479.48], [17388, 1469.72], [17444, 1414.92], [17499, 1418.68], [17555, 1421.91], [17611, 1418.58], [17666, 1426.23], [17722, 1505.3], [17777, 1358.85], [17833, 1336.48], [17888, 1283.55], [17944, 1279.54], [17999, 1281.26], [18055, 1288.93], [18111, 1294.84], [18166, 1327.63], [18222, 1377.8], [18277, 1386.04], [18333, 1390.68], [18388, 1351.49], [18444, 1301.16], [18499, 1312.59], [18555, 1269.32], [18611, 1233.94], [18666, 1347.56], [18722, 1459.16], [18777, 1429.86], [18833, 1494.89], [18888, 1476.56], [18944, 1457.45], [18999, 1429.4], [19055, 1434.42], [19111, 1431.74], [19166, 1445.74], [19222, 1470.57], [19277, 1564.63], [19333, 1577.27], [19388, 1630.42], [19444, 1664.33], [19499, 1681.43], [19555, 1690.06], [19611, 1750.73], [19666, 1729.67], [19722, 1815.27], [19777, 1887.58], [19833, 1896.37], [19888, 1903.75], [19944, 1918.57], [19999, 1919.63]], "hist": [{"x0": -456.29, "x1": -415.43, "c": 1}, {"x0": -415.43, "x1": -374.57, "c": 2}, {"x0": -374.57, "x1": -333.71, "c": 1}, {"x0": -333.71, "x1": -292.85, "c": 1}, {"x0": -292.85, "x1": -251.99, "c": 7}, {"x0": -251.99, "x1": -211.13, "c": 14}, {"x0": -211.13, "x1": -170.27, "c": 12}, {"x0": -170.27, "x1": -129.41, "c": 27}, {"x0": -129.41, "x1": -88.55, "c": 18}, {"x0": -88.55, "x1": -47.69, "c": 24}, {"x0": -47.69, "x1": -6.83, "c": 32}, {"x0": -6.83, "x1": 34.03, "c": 26}, {"x0": 34.03, "x1": 74.89, "c": 32}, {"x0": 74.89, "x1": 115.75, "c": 29}, {"x0": 115.75, "x1": 156.61, "c": 25}, {"x0": 156.61, "x1": 197.47, "c": 22}, {"x0": 197.47, "x1": 238.33, "c": 20}, {"x0": 238.33, "x1": 279.19, "c": 14}, {"x0": 279.19, "x1": 320.05, "c": 14}, {"x0": 320.05, "x1": 360.91, "c": 7}, {"x0": 360.91, "x1": 401.77, "c": 1}, {"x0": 401.77, "x1": 442.63, "c": 1}, {"x0": 442.63, "x1": 483.49, "c": 4}], "recent": [230.83, 239.77, 211.65, 196.97, 312.79, 302.98, 168.39, 195.05, 215.24, 145.16, 158.27, 33.05, 75.41, -8.03], "sweep": [{"toxicity": 0.0, "pnl": 243.25, "win_rate": 0.518, "sharpe": 0.42, "halted": false}, {"toxicity": 0.3, "pnl": 900.0, "win_rate": 0.5359, "sharpe": 1.98, "halted": false}, {"toxicity": 0.6, "pnl": 1883.34, "win_rate": 0.5719, "sharpe": 3.68, "halted": false}, {"toxicity": 1.0, "pnl": -1313.1, "win_rate": 0.415, "sharpe": -2.49, "halted": true}, {"toxicity": 1.5, "pnl": -1396.34, "win_rate": 0.352, "sharpe": -3.59, "halted": true}], "risk": [{"label": "Daily loss", "used": 0.0, "limit": 1500.0}, {"label": "Max drawdown", "used": 709.75, "limit": 2000.0}], "limits": {"max_position_per_market": 2000.0, "max_gross_exposure": 8000.0, "max_daily_loss": 1500.0, "max_drawdown": 2000.0}};
+const $=(s)=>document.querySelector(s);
+const tip=$("#tip");
+const money=(v)=>(v<0?"-$":"$")+Math.abs(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const money0=(v)=>(v<0?"-$":"$")+Math.abs(v).toLocaleString(undefined,{maximumFractionDigits:0});
+function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+function showTip(html,x,y){tip.innerHTML=html;tip.style.opacity=1;
+  const r=tip.getBoundingClientRect();let nx=x+14,ny=y-r.height-10;
+  if(nx+r.width>innerWidth-8)nx=x-r.width-14; if(ny<8)ny=y+16;
+  tip.style.left=nx+"px";tip.style.top=ny+"px";}
+function hideTip(){tip.style.opacity=0;}
+
+/* ---- header + kpis ---- */
+function header(){
+  const p=DATA.params, s=DATA.stats;
+  $("#sub").textContent=`${DATA.mode}  ·  ${p.steps.toLocaleString()} cycles · `+
+    `${p.window_len_s}s windows / ${p.stagger_s}s stagger · toxicity ${p.toxicity} · fees ${p.fee_bps}bps · generated ${DATA.generated}`;
+  const sc=$("#statechip");
+  if(s.halted){sc.className="chip halt";sc.textContent="HALTED · "+s.halt_reason;}
+  else{sc.className="chip ok";sc.textContent="ACTIVE · no breach";}
+}
+function kpis(){
+  const s=DATA.stats;
+  const items=[
+    {lab:"Realized PnL",val:money(s.realized_pnl),cls:s.realized_pnl>=0?"pos":"neg",
+      foot:money(s.fees_paid)+" fees"},
+    {lab:"Win rate",val:(s.win_rate*100).toFixed(1)+"%",cls:"",
+      foot:s.n_windows+" windows"},
+    {lab:"Sharpe",val:s.sharpe.toFixed(2),cls:s.sharpe>=0?"pos":"neg",foot:"per-window"},
+    {lab:"Max drawdown",val:money0(s.max_drawdown),cls:"warnc",foot:"peak-to-trough"},
+    {lab:"Fills",val:s.n_fills.toLocaleString(),cls:"",foot:"maker fills"},
+    {lab:"Net / window",val:money(s.realized_pnl/Math.max(1,s.n_windows)),
+      cls:s.realized_pnl>=0?"pos":"neg",foot:"avg realized"},
+  ];
+  $("#kpis").innerHTML=items.map(i=>
+    `<div class="kpi"><div class="lab">${i.lab}</div>`+
+    `<div class="val ${i.cls}">${i.val}</div><div class="foot">${i.foot}</div></div>`).join("");
+}
+
+/* ---- live snapshot ---- */
+function live(){
+  const L=DATA.live; if(!L||!L.markets||!L.markets.length)return;
+  $("#livewrap").style.display="grid";
+  $("#livemeta").textContent=`${L.source} · ${L.ts}`;
+  $("#livebody").innerHTML=L.markets.map(m=>{
+    const spread=(m.ask!=null&&m.bid!=null)?(m.ask-m.bid):null;
+    const bid=m.bid!=null?m.bid.toFixed(3):"—";
+    const ask=m.ask!=null?m.ask.toFixed(3):"—";
+    const edge=spread!=null?`${(spread*100).toFixed(1)}¢`:"pulled";
+    return `<tr><td>${m.asset}</td><td class="num">$${m.last.toLocaleString(undefined,{maximumFractionDigits:2})}</td>`+
+      `<td class="num">${m.vol_pct.toFixed(2)}%/d</td>`+
+      `<td class="num">${m.fair.toFixed(3)}</td>`+
+      `<td class="num">${m.delta.toFixed(1)}</td>`+
+      `<td class="num pos">${bid}</td><td class="num neg">${ask}</td>`+
+      `<td class="num">${edge}</td></tr>`;
+  }).join("");
+}
+
+/* ---- equity area+line ---- */
+function equity(){
+  const el=$("#equity"), W=900,H=260,P={l:52,r:14,t:14,b:24};
+  const pts=DATA.equity; const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+  const xmin=xs[0],xmax=xs[xs.length-1];
+  let ymin=Math.min(0,...ys),ymax=Math.max(0,...ys); if(ymin===ymax){ymax+=1;}
+  const pad=(ymax-ymin)*0.08; ymin-=pad; ymax+=pad;
+  const X=x=>P.l+(x-xmin)/(xmax-xmin)*(W-P.l-P.r);
+  const Y=y=>P.t+(ymax-y)/(ymax-ymin)*(H-P.t-P.b);
+  let g="";
+  const ticks=4;
+  for(let i=0;i<=ticks;i++){const v=ymin+(ymax-ymin)*i/ticks;const y=Y(v);
+    g+=`<line class="gl" x1="${P.l}" y1="${y.toFixed(1)}" x2="${W-P.r}" y2="${y.toFixed(1)}"/>`+
+       `<text class="axis" x="${P.l-8}" y="${(y+3).toFixed(1)}" text-anchor="end">${money0(v)}</text>`;}
+  const y0=Y(0);
+  g+=`<line x1="${P.l}" y1="${y0.toFixed(1)}" x2="${W-P.r}" y2="${y0.toFixed(1)}" stroke="var(--faint)" stroke-width="1" stroke-dasharray="3 3"/>`;
+  let line=pts.map((p,i)=>(i?"L":"M")+X(p[0]).toFixed(1)+" "+Y(p[1]).toFixed(1)).join(" ");
+  const area=`M${X(xs[0]).toFixed(1)} ${y0.toFixed(1)} `+
+    pts.map(p=>"L"+X(p[0]).toFixed(1)+" "+Y(p[1]).toFixed(1)).join(" ")+
+    ` L${X(xs[xs.length-1]).toFixed(1)} ${y0.toFixed(1)} Z`;
+  const last=pts[pts.length-1];
+  g+=`<path d="${area}" fill="var(--accent-soft)"/>`+
+     `<path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>`+
+     `<circle cx="${X(last[0]).toFixed(1)}" cy="${Y(last[1]).toFixed(1)}" r="4" fill="var(--accent)"/>`;
+  g+=`<line id="cx" x1="0" y1="${P.t}" x2="0" y2="${H-P.b}" stroke="var(--muted)" stroke-width="1" opacity="0"/>`+
+     `<circle id="cd" r="4" fill="var(--accent)" stroke="var(--panel)" stroke-width="2" opacity="0"/>`;
+  el.innerHTML=g;
+  const cx=el.querySelector("#cx"),cd=el.querySelector("#cd");
+  el.addEventListener("pointermove",e=>{
+    const r=el.getBoundingClientRect();const sx=(e.clientX-r.left)/r.width*W;
+    if(sx<P.l||sx>W-P.r){hideTip();cx.style.opacity=0;cd.style.opacity=0;return;}
+    const xv=xmin+(sx-P.l)/(W-P.l-P.r)*(xmax-xmin);
+    let best=pts[0],bd=1e18;for(const p of pts){const d=Math.abs(p[0]-xv);if(d<bd){bd=d;best=p;}}
+    cx.setAttribute("x1",X(best[0]));cx.setAttribute("x2",X(best[0]));cx.style.opacity=.6;
+    cd.setAttribute("cx",X(best[0]));cd.setAttribute("cy",Y(best[1]));cd.style.opacity=1;
+    showTip(`cycle <b>${best[0].toLocaleString()}</b><br>equity ${money(best[1])}`,e.clientX,e.clientY);
+  });
+  el.addEventListener("pointerleave",()=>{hideTip();cx.style.opacity=0;cd.style.opacity=0;});
+}
+
+/* ---- histogram ---- */
+function hist(){
+  const el=$("#hist"),W=560,H=240,P={l:40,r:12,t:12,b:28};
+  const bins=DATA.hist; if(!bins.length){el.innerHTML="";return;}
+  const cmax=Math.max(...bins.map(b=>b.c));
+  const bw=(W-P.l-P.r)/bins.length;
+  const Y=c=>P.t+(1-c/cmax)*(H-P.t-P.b);
+  let g="";
+  for(let i=0;i<=3;i++){const c=cmax*i/3;const y=Y(c);
+    g+=`<line class="gl" x1="${P.l}" y1="${y.toFixed(1)}" x2="${W-P.r}" y2="${y.toFixed(1)}"/>`+
+       `<text class="axis" x="${P.l-7}" y="${(y+3).toFixed(1)}" text-anchor="end">${Math.round(c)}</text>`;}
+  bins.forEach((b,i)=>{
+    const x=P.l+i*bw, y=Y(b.c), h=(H-P.b)-y;
+    const mid=(b.x0+b.x1)/2, col=mid>=0?"var(--pos)":"var(--neg)";
+    g+=`<rect x="${(x+1).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw-2).toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" rx="2" fill="${col}" opacity=".85" data-i="${i}"/>`;
+  });
+  const yb=H-P.b;
+  g+=`<line x1="${P.l}" y1="${yb}" x2="${W-P.r}" y2="${yb}" stroke="var(--border)" stroke-width="1"/>`+
+     `<text class="axis" x="${P.l}" y="${H-8}" text-anchor="start">loss</text>`+
+     `<text class="axis" x="${W-P.r}" y="${H-8}" text-anchor="end">profit</text>`;
+  el.innerHTML=g;
+  el.querySelectorAll("rect[data-i]").forEach(rc=>{
+    const b=bins[+rc.dataset.i];
+    rc.addEventListener("pointermove",e=>{rc.setAttribute("opacity","1");
+      showTip(`${money(b.x0)} → ${money(b.x1)}<br><b>${b.c}</b> windows`,e.clientX,e.clientY);});
+    rc.addEventListener("pointerleave",()=>{rc.setAttribute("opacity",".85");hideTip();});
+  });
+}
+
+/* ---- toxicity sweep ---- */
+function sweep(){
+  const el=$("#sweep"),W=560,H=240,P={l:48,r:12,t:14,b:34};
+  const rows=DATA.sweep; const vals=rows.map(r=>r.pnl);
+  let ymin=Math.min(0,...vals),ymax=Math.max(0,...vals);
+  const pad=(ymax-ymin)*0.1||1; ymin-=pad;ymax+=pad;
+  const bw=(W-P.l-P.r)/rows.length;
+  const Y=v=>P.t+(ymax-v)/(ymax-ymin)*(H-P.t-P.b);
+  let g="";
+  for(let i=0;i<=4;i++){const v=ymin+(ymax-ymin)*i/4;const y=Y(v);
+    g+=`<line class="gl" x1="${P.l}" y1="${y.toFixed(1)}" x2="${W-P.r}" y2="${y.toFixed(1)}"/>`+
+       `<text class="axis" x="${P.l-7}" y="${(y+3).toFixed(1)}" text-anchor="end">${money0(v)}</text>`;}
+  const y0=Y(0);
+  rows.forEach((r,i)=>{
+    const cx=P.l+i*bw+bw/2, col=r.pnl>=0?"var(--pos)":"var(--neg)";
+    const yv=Y(r.pnl), top=Math.min(yv,y0), h=Math.abs(yv-y0);
+    g+=`<rect x="${(cx-bw*0.32).toFixed(1)}" y="${top.toFixed(1)}" width="${(bw*0.64).toFixed(1)}" height="${Math.max(1,h).toFixed(1)}" rx="3" fill="${col}" opacity=".88" data-i="${i}"/>`;
+    if(r.halted) g+=`<text class="axis" x="${cx.toFixed(1)}" y="${(top-6).toFixed(1)}" text-anchor="middle" fill="var(--neg)">halt</text>`;
+    g+=`<text class="axis" x="${cx.toFixed(1)}" y="${H-10}" text-anchor="middle">tox ${r.toxicity}</text>`;
+  });
+  g+=`<line x1="${P.l}" y1="${y0.toFixed(1)}" x2="${W-P.r}" y2="${y0.toFixed(1)}" stroke="var(--faint)" stroke-width="1"/>`;
+  el.innerHTML=g;
+  el.querySelectorAll("rect[data-i]").forEach(rc=>{
+    const r=rows[+rc.dataset.i];
+    rc.addEventListener("pointermove",e=>{rc.setAttribute("opacity","1");
+      showTip(`toxicity <b>${r.toxicity}</b><br>PnL ${money(r.pnl)}<br>win ${(r.win_rate*100).toFixed(1)}% · sharpe ${r.sharpe.toFixed(2)}${r.halted?"<br><span style='color:var(--neg)'>kill switch fired</span>":""}`,e.clientX,e.clientY);});
+    rc.addEventListener("pointerleave",()=>{rc.setAttribute("opacity",".88");hideTip();});
+  });
+}
+
+/* ---- risk + table ---- */
+function risk(){
+  $("#risk").innerHTML=DATA.risk.map(r=>{
+    const pct=Math.max(0,Math.min(1,r.used/r.limit));
+    const cls=pct>=0.9?"crit":pct>=0.7?"warn":"";
+    return `<div class="rrow"><div class="rlab"><span>${r.label}</span>`+
+      `<span class="rv">${money0(r.used)} / ${money0(r.limit)} · ${(pct*100).toFixed(0)}%</span></div>`+
+      `<div class="track"><div class="fill ${cls}" style="width:${(pct*100).toFixed(1)}%"></div></div></div>`;
+  }).join("");
+  const s=DATA.stats,k=$("#kill");
+  if(s.halted){k.innerHTML=`<span class="dot r"></span><span>Kill switch <b>ENGAGED</b> — ${s.halt_reason}. Risk-increasing orders blocked; only reducing trades allowed.</span>`;}
+  else{k.innerHTML=`<span class="dot g"></span><span>All kill switches nominal. Position, gross-exposure, daily-loss and drawdown limits within bounds.</span>`;}
+}
+function recent(){
+  $("#recent").innerHTML=DATA.recent.map((p,i)=>{
+    const w=p>1e-9,l=p<-1e-9;
+    const tag=w?`<span class="tag w">WIN</span>`:l?`<span class="tag l">LOSS</span>`:`<span class="tag">FLAT</span>`;
+    const cls=w?"pos":l?"neg":"";
+    return `<tr><td>${DATA.stats.n_windows-DATA.recent.length+i+1}</td>`+
+      `<td class="num ${cls}">${money(p)}</td><td>${tag}</td></tr>`;
+  }).reverse().join("");
+}
+function foot(){
+  const L=DATA.limits;
+  $("#foot").innerHTML=
+    `<b>Reading this:</b> data is a synthetic backtest, not live trading — the numbers prove the engine is internally sound, not that it prints money. `+
+    `The adverse-selection sweep is the honest panel: a thin binary edge survives clean mispricing but collapses once counterparty flow is informed. `+
+    `<br><b>Limits in force:</b> position ≤ ${money0(L.max_position_per_market)}/mkt · gross ≤ ${money0(L.max_gross_exposure)} · daily loss ≤ ${money0(L.max_daily_loss)} · drawdown ≤ ${money0(L.max_drawdown)}. `+
+    `The same page renders a live/paper session — point it at a RunnerStats snapshot instead of a backtest.`;
+}
+
+/* ---- theme toggle ---- */
+function initTheme(){
+  const btn=$("#themebtn");
+  const cur=()=>document.documentElement.getAttribute("data-theme")||
+    (matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");
+  const draw=()=>{header();kpis();live();equity();hist();sweep();risk();recent();foot();};
+  btn.addEventListener("click",()=>{
+    const next=cur()==="dark"?"light":"dark";
+    document.documentElement.setAttribute("data-theme",next);
+    btn.textContent=next==="dark"?"☀ light":"☾ dark";
+    draw();
+  });
+  btn.textContent=cur()==="dark"?"☀ light":"☾ dark";
+}
+
+header();kpis();live();equity();hist();sweep();risk();recent();foot();initTheme();
+addEventListener("resize",()=>{equity();hist();sweep();});
+</script>
