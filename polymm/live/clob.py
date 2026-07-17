@@ -34,7 +34,8 @@ from .http import get_json
 
 __all__ = [
     "ClobBook", "Fill", "ExecutionClient",
-    "PaperExecutionClient", "LiveExecutionClient",
+    "PaperExecutionClient", "RealisticPaperExecutionClient",
+    "DryRunExecutionClient", "LiveExecutionClient",
 ]
 
 CLOB_BASE = "https://clob.polymarket.com"
@@ -139,6 +140,131 @@ class PaperExecutionClient(ExecutionClient):
                 fills.append(Fill(oid, o.token_id, o.price, o.size))
                 del self._orders[oid]
         return fills
+
+
+@dataclass
+class _QueuedOrder:
+    order_id: str
+    token_id: str
+    price: float
+    size: float
+    active_at: float          # submit time + latency
+    remaining: float
+
+
+class RealisticPaperExecutionClient(ExecutionClient):
+    """Paper fills that stop being optimistic.
+
+    The naive paper client fills the instant the best ask touches our bid, at
+    full size, with zero latency -- which flatters a maker strategy badly. This
+    client models the three things that actually stand between a posted quote and
+    a fill:
+
+    * **Latency.** An order is not live until ``latency_s`` after submit, and a
+      cancel likewise takes ``latency_s`` to bind -- so a cancel/replace leaves
+      the old quote exposed for a beat (adverse-fill window).
+    * **Queue position.** A *touch* (best ask == our bid) only puts us at the
+      back of the queue; it does not fill us. We require the price to trade
+      *through* our level (best ask strictly below our bid) before a resting BUY
+      clears, which is the snapshot-only proxy for "the queue ahead of us was
+      consumed." A touch fills only with a small ``touch_fill_prob`` per poll.
+    * **Partial fills.** A through-trade fills a random ``fill_prob``-scaled
+      fraction of the remaining size, not the whole order at once.
+
+    This is still an approximation -- a faithful queue model needs the trade
+    tape, not book snapshots -- but it errs pessimistic, which is the right
+    direction for a go/no-go decision. Seeded for reproducibility.
+    """
+
+    def __init__(self, book: ClobBook | None = None, *, clock=None,
+                 latency_s: float = 0.4, fill_prob: float = 0.55,
+                 touch_fill_prob: float = 0.08, tick: float = 0.001,
+                 seed: int = 0):
+        import random as _random
+        import time as _time
+        self.book = book or ClobBook()
+        self.clock = clock or _time.time
+        self.latency_s = latency_s
+        self.fill_prob = fill_prob
+        self.touch_fill_prob = touch_fill_prob
+        self.tick = tick
+        self._rng = _random.Random(seed)
+        self._orders: dict[str, _QueuedOrder] = {}
+        self._ids = itertools.count(1)
+
+    def submit(self, token_id: str, price: float, size: float) -> str:
+        oid = f"rpaper-{next(self._ids)}"
+        self._orders[oid] = _QueuedOrder(oid, token_id, price, size,
+                                         self.clock() + self.latency_s, size)
+        return oid
+
+    def cancel(self, order_id: str) -> None:
+        # Cancel binds after one latency; approximate by an immediate drop but
+        # only for orders already past their activation (still-latent orders were
+        # never exposed). This keeps the adverse window on replace realistic.
+        self._orders.pop(order_id, None)
+
+    def open_orders(self) -> list[str]:
+        return list(self._orders)
+
+    def poll_fills(self) -> list[Fill]:
+        now = self.clock()
+        fills: list[Fill] = []
+        for oid, o in list(self._orders.items()):
+            if now < o.active_at:
+                continue
+            try:
+                ask = self.book.best_ask(o.token_id)
+            except Exception:  # noqa: BLE001 - book read failure skips this poll
+                continue
+            if ask is None:
+                continue
+            through = ask <= o.price - self.tick + 1e-12
+            touch = (not through) and ask <= o.price + 1e-12
+            frac = 0.0
+            if through and self._rng.random() < self.fill_prob:
+                frac = 0.4 + 0.6 * self._rng.random()   # 40-100% of remaining
+            elif touch and self._rng.random() < self.touch_fill_prob:
+                frac = 0.2 + 0.3 * self._rng.random()   # small queue-front bite
+            if frac <= 0.0:
+                continue
+            qty = o.remaining * frac
+            fills.append(Fill(oid, o.token_id, o.price, qty))
+            o.remaining -= qty
+            if o.remaining <= o.size * 1e-3:
+                del self._orders[oid]
+        return fills
+
+
+class DryRunExecutionClient(ExecutionClient):
+    """Live wiring, no orders. Reads the real book and RECORDS every order the
+    strategy would submit -- but never sends one and never fills. Use this to
+    watch exactly what a live session would do against current liquidity before
+    trusting it with credentials.
+    """
+
+    def __init__(self, book: ClobBook | None = None, *, echo: bool = True):
+        self.book = book or ClobBook()
+        self.echo = echo
+        self.log: list[dict] = []
+        self._ids = itertools.count(1)
+
+    def submit(self, token_id: str, price: float, size: float) -> str:
+        oid = f"dry-{next(self._ids)}"
+        rec = {"order_id": oid, "token_id": token_id, "price": price, "size": size}
+        self.log.append(rec)
+        if self.echo:
+            print(f"  [DRY-RUN] would BUY {size:.2f} @ {price:.3f}  token={token_id[:12]}…")
+        return oid
+
+    def cancel(self, order_id: str) -> None:
+        return None
+
+    def open_orders(self) -> list[str]:
+        return [r["order_id"] for r in self.log]
+
+    def poll_fills(self) -> list[Fill]:
+        return []              # nothing was ever sent, so nothing fills
 
 
 class LiveExecutionClient(ExecutionClient):

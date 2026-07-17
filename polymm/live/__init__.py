@@ -13,16 +13,20 @@ and environment credentials, and is intentionally opt-in.
 """
 
 from .gamma import GammaClient, PolyMarket
-from .spot import SpotSource, BinanceSpot, CoinbaseSpot, MultiSourceSpot
+from .spot import (
+    SpotSource, BybitSpot, BinanceSpot, CoinbaseSpot, MultiSourceSpot,
+)
 from .clob import (
-    ClobBook, Fill, ExecutionClient, PaperExecutionClient, LiveExecutionClient,
+    ClobBook, Fill, ExecutionClient, PaperExecutionClient,
+    RealisticPaperExecutionClient, DryRunExecutionClient, LiveExecutionClient,
 )
 from .runner import LiveRunner, TrackedMarket, OrderRec
 
 __all__ = [
     "GammaClient", "PolyMarket",
-    "SpotSource", "BinanceSpot", "CoinbaseSpot", "MultiSourceSpot",
+    "SpotSource", "BybitSpot", "BinanceSpot", "CoinbaseSpot", "MultiSourceSpot",
     "ClobBook", "Fill", "ExecutionClient",
-    "PaperExecutionClient", "LiveExecutionClient",
+    "PaperExecutionClient", "RealisticPaperExecutionClient",
+    "DryRunExecutionClient", "LiveExecutionClient",
     "LiveRunner", "TrackedMarket", "OrderRec",
 ]

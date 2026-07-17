@@ -20,7 +20,10 @@ import argparse
 import time
 
 from polymm.config import StrategyConfig
-from polymm.live import LiveRunner, GammaClient, MultiSourceSpot, PaperExecutionClient
+from polymm.live import (
+    LiveRunner, GammaClient, MultiSourceSpot,
+    PaperExecutionClient, RealisticPaperExecutionClient, DryRunExecutionClient,
+)
 
 
 def main() -> None:
@@ -28,19 +31,40 @@ def main() -> None:
     ap.add_argument("--cycles", type=int, default=8)
     ap.add_argument("--interval", type=float, default=3.0)
     ap.add_argument("--assets", default="BTC,ETH")
+    ap.add_argument("--realistic", action="store_true",
+                    help="model latency + queue position + partial fills "
+                         "(recommended before trusting any go-live decision)")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="log the exact orders a LIVE session would send against "
+                         "the real book, but send nothing")
+    ap.add_argument("--latency", type=float, default=0.4,
+                    help="modeled order latency in seconds (--realistic)")
+    ap.add_argument("--fill-prob", type=float, default=0.55,
+                    help="per-poll fill probability on a through-trade (--realistic)")
     args = ap.parse_args()
 
     assets = {a.strip().upper() for a in args.assets.split(",") if a.strip()}
+    if args.dry_run:
+        execution = DryRunExecutionClient()
+        mode = "DRY-RUN (live wiring, NO orders sent)"
+    elif args.realistic:
+        execution = RealisticPaperExecutionClient(
+            latency_s=args.latency, fill_prob=args.fill_prob)
+        mode = "paper · realistic fills (latency+queue+partials, no orders sent)"
+    else:
+        execution = PaperExecutionClient()
+        mode = "paper · optimistic fills (no orders sent)"
+
     runner = LiveRunner(
         StrategyConfig(),
-        execution=PaperExecutionClient(),
+        execution=execution,
         spot=MultiSourceSpot(),
         gamma=GammaClient(),
         assets=assets,
         discovery_interval_s=30.0,
     )
 
-    print(f"paper trading (no orders sent) | assets={sorted(assets)}")
+    print(f"{mode} | assets={sorted(assets)}")
     print("-" * 84)
     for i in range(args.cycles):
         snap = runner.poll()

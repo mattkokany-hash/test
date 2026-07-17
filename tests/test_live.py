@@ -8,7 +8,10 @@ from polymm.live.gamma import (
     _load_json_field,
 )
 from polymm.live.spot import SpotSource, MultiSourceSpot
-from polymm.live.clob import PaperExecutionClient, Fill, ExecutionClient
+from polymm.live.clob import (
+    PaperExecutionClient, RealisticPaperExecutionClient, DryRunExecutionClient,
+    Fill, ExecutionClient,
+)
 from polymm.live.runner import LiveRunner
 
 
@@ -99,6 +102,57 @@ def test_paper_fill_when_ask_crosses():
     fills = ex.poll_fills()
     assert len(fills) == 1 and fills[0].order_id == oid
     assert ex.open_orders() == []          # consumed
+
+
+def _realistic(book, t, **kw):
+    return RealisticPaperExecutionClient(book=book, clock=lambda: t[0],
+                                         latency_s=1.0, tick=0.001, seed=1, **kw)
+
+
+def test_realistic_respects_latency():
+    book = _FakeBook(ask=0.40)             # already trading well through 0.50
+    t = [0.0]
+    ex = _realistic(book, t, fill_prob=1.0, touch_fill_prob=0.0)
+    ex.submit("tok", 0.50, 100.0)
+    assert ex.poll_fills() == []           # t=0, order still latent (<1.0s)
+    t[0] = 1.5                              # past activation
+    assert len(ex.poll_fills()) >= 1       # now it can fill
+
+
+def test_realistic_touch_does_not_fill_but_through_does():
+    t = [2.0]
+    book = _FakeBook(ask=0.50)             # exact touch of our 0.50 bid
+    ex = _realistic(book, t, fill_prob=1.0, touch_fill_prob=0.0)
+    ex.submit("tok", 0.50, 100.0)
+    t[0] = 4.0                              # past the latency activation
+    assert ex.poll_fills() == []           # a touch alone never fills here
+    book.ask = 0.498                       # price trades THROUGH our level
+    assert len(ex.poll_fills()) >= 1
+
+
+def test_realistic_partial_fills_accumulate():
+    t = [2.0]
+    book = _FakeBook(ask=0.49)             # through
+    ex = _realistic(book, t, fill_prob=1.0, touch_fill_prob=0.0)
+    ex.submit("tok", 0.50, 100.0)
+    t[0] = 4.0                              # past the latency activation
+    total = 0.0
+    for _ in range(30):
+        for f in ex.poll_fills():
+            total += f.size
+        if not ex.open_orders():
+            break
+    assert 99.0 <= total <= 100.0001       # eventually ~fully filled
+    assert ex.open_orders() == []
+
+
+def test_dry_run_records_but_never_fills():
+    book = _FakeBook(ask=0.10)             # deeply crossing -> would fill live
+    ex = DryRunExecutionClient(book=book, echo=False)
+    oid = ex.submit("tok", 0.50, 100.0)
+    assert oid in ex.open_orders()
+    assert ex.log[0]["price"] == 0.50 and ex.log[0]["size"] == 100.0
+    assert ex.poll_fills() == []           # nothing was sent, nothing fills
 
 
 # --- runner wiring --------------------------------------------------------

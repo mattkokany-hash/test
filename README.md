@@ -69,7 +69,7 @@ polymm/
   backtest.py    synthetic overlapping-window world with an adverse-selection knob
   datafeed.py    generic feed/discovery interfaces (live adapter lives in live/)
   live/          real Polymarket adapter: gamma, spot, clob, runner
-tests/           45 stdlib tests (also runnable under pytest)
+tests/           49 stdlib tests (also runnable under pytest)
 run_tests.py     zero-dependency test runner
 run_backtest.py  demo: baseline run + toxicity sweep + kill-switch check
 run_paper.py     paper-trade the engine against LIVE books (no orders, no keys)
@@ -115,11 +115,25 @@ routing**, and its default mode is **paper trading against the live book**.
 **Paper trade against live liquidity — no keys, no orders:**
 
 ```bash
-python3 run_paper.py --cycles 50 --interval 3 --assets BTC,ETH
+python3 run_paper.py --cycles 50 --interval 3 --assets BTC,ETH   # optimistic fills
+python3 run_paper.py --realistic --latency 0.4 --fill-prob 0.55  # honest fills
+python3 run_paper.py --dry-run                                   # log would-be orders
 ```
 
 It discovers real markets, pulls the real book and real spot, quotes through the
-risk engine, and simulates fills against actual depth.
+risk engine, and simulates fills against actual depth. Three execution modes:
+
+- **optimistic** (`PaperExecutionClient`) — fills the instant the ask touches your
+  bid, full size, zero latency. Flatters a maker strategy; fine for a plumbing check.
+- **realistic** (`RealisticPaperExecutionClient`, `--realistic`) — models the three
+  things between a quote and a fill: **latency** (orders go live after a delay; a
+  cancel/replace leaves the old quote exposed), **queue position** (a *touch*
+  doesn't fill you — the price must trade *through* your level), and **partial
+  fills**. It errs pessimistic on purpose, which is the right bias for a go/no-go
+  decision. (A fully faithful queue model needs the trade tape, not book snapshots.)
+- **dry-run** (`DryRunExecutionClient`, `--dry-run`) — full live wiring against the
+  real book, but logs the exact orders it *would* send and sends nothing. The last
+  safe step before handing over credentials.
 
 **Two design points worth knowing:**
 
