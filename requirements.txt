@@ -1,0 +1,15 @@
+# polymm core has ZERO third-party dependencies — it runs on the Python 3.10+
+# standard library alone (math, random, dataclasses, typing).
+#
+# The backtester, tests, and demo all run with just `python3`.
+#
+# The live adapter (polymm/live/) does market discovery, book reads, and the
+# spot feed with the standard library too (urllib) -- paper trading needs NO
+# third-party packages.
+#
+# Optional, ONLY for placing real live orders (polymm.live.LiveExecutionClient):
+#   py-clob-client    # Polymarket CLOB signing + order routing
+#
+# Optional, nice-to-haves:
+#   websockets        # lower-latency spot / CLOB streaming (drop-in later)
+#   pytest            # if you prefer it over the bundled run_tests.py
