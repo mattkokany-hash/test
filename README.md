@@ -99,6 +99,25 @@ The sweep is the honest part: crank up `toxicity` (how informed the flow hitting
 your quotes is) and the edge flips to a loss and the kill switch fires. **That is
 what real adverse selection does to this style of strategy.**
 
+## See the bot's top setups and their triggers (`run_setups.py`)
+
+Every fill is tagged with the **setup** that triggered it — `phase × conviction ×
+side` (e.g. `LATE_STRONG_YES` = buy YES late in the window when the model is
+strongly convinced up). `run_setups.py` ranks setups by realized profit, prints
+the top 5 with their **exact firing conditions**, then re-checks them across
+several unseen worlds:
+
+```bash
+python3 run_setups.py
+```
+
+The out-of-sample section is the honest core: setups are discovered *in-sample*,
+so trading only the ones that won yesterday is textbook overfitting. The tool
+re-ranks them on unseen data and labels each `holds up` or `NOISE (dropped)`.
+Focusing the bot on the survivors (`BacktestConfig(focus_setups=...)`) trades
+fewer, more selective positions. Trust the out-of-sample column, never the
+discovery column. See `polymm/attribution.py` for the trigger taxonomy.
+
 ## The live Polymarket adapter (`polymm/live/`)
 
 The engine is venue-agnostic; `polymm/live/` is a working adapter that plugs it

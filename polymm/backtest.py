@@ -30,6 +30,7 @@ from dataclasses import dataclass, field
 
 from .config import StrategyConfig
 from .strategy import MarketMaker, MarketState
+from .attribution import Trade, classify_trigger
 
 __all__ = ["BacktestConfig", "BacktestResult", "run_backtest", "gbm_path"]
 
@@ -56,6 +57,7 @@ class BacktestConfig:
     toxicity: float = 0.6           # adverse-selection strength (our edge sink)
     tox_horizon_s: float = 30.0     # lookahead the toxic flow "sees"
     seed: int = 7
+    focus_setups: tuple = ()        # if set, only take fills whose setup matches
 
 
 @dataclass
@@ -71,6 +73,21 @@ class BacktestResult:
     halt_reason: str
     equity_curve: list[float] = field(default_factory=list)
     per_window_pnl: list[float] = field(default_factory=list)
+    trades: list = field(default_factory=list)   # per-fill Trade attribution
+
+
+def _attribute_fills(fills: list[dict], outcome: float, trades: list) -> None:
+    """Turn settled open-fills into attributed Trades. Buy-YES profits when the
+    window resolves up (outcome=1); sell-YES is the mirror. Net of the fill fee."""
+    for f in fills:
+        if f["side"] == "buy":
+            gross = f["size"] * (outcome - f["price"])
+        else:
+            gross = f["size"] * (f["price"] - outcome)
+        trades.append(Trade(
+            market_id="", side=f["side"], size=f["size"], price=f["price"],
+            fair=f["fair"], tau_frac=f["tau_frac"], outcome=outcome,
+            pnl=gross - f["fee"], setup=f["setup"]))
 
 
 def _standardized_lookahead(path: list[float], i: int, horizon_steps: int) -> float:
@@ -82,10 +99,16 @@ def _standardized_lookahead(path: list[float], i: int, horizon_steps: int) -> fl
 
 
 def run_backtest(bt: BacktestConfig | None = None,
-                 cfg: StrategyConfig | None = None) -> BacktestResult:
+                 cfg: StrategyConfig | None = None, *,
+                 collect_trades: bool = False) -> BacktestResult:
     bt = bt or BacktestConfig()
     cfg = cfg or StrategyConfig()
     rng = random.Random(bt.seed)
+    focus = set(bt.focus_setups)
+    attribute = collect_trades or bool(focus)
+    # market_id -> list of open-fill records awaiting settlement attribution.
+    open_fills: dict[str, list[dict]] = {}
+    trades: list[Trade] = []
 
     path = gbm_path(bt.steps, bt.dt, bt.true_sigma, bt.s0, rng)
     mm = MarketMaker(cfg)
@@ -135,22 +158,36 @@ def run_backtest(bt: BacktestConfig | None = None,
                 venue = min(max(fair + eps, 0.0), 1.0)
 
                 marks = result.fair
+                tau_frac = max(0.0, (active[q.market_id].resolve_at - now)
+                               / bt.window_len_s)
                 # Buy YES if our bid is at/above where the venue will sell.
                 if q.bid is not None and q.bid_size > 0.0 and venue <= q.bid:
-                    if mm.record_fill(q.market_id, "buy", q.bid_size, q.bid, marks):
+                    setup = classify_trigger("buy", fair, tau_frac)
+                    if (not focus or setup in focus) and \
+                            mm.record_fill(q.market_id, "buy", q.bid_size, q.bid, marks):
                         fee = fee_per_side * q.bid * q.bid_size
                         mm.inv.realized_pnl -= fee
                         mm.inv.cash -= fee
                         fees_paid += fee
                         n_fills += 1
+                        if attribute:
+                            open_fills.setdefault(q.market_id, []).append(dict(
+                                side="buy", size=q.bid_size, price=q.bid,
+                                fair=fair, tau_frac=tau_frac, fee=fee, setup=setup))
                 # Sell YES if our ask is at/below where the venue will buy.
                 elif q.ask is not None and q.ask_size > 0.0 and venue >= q.ask:
-                    if mm.record_fill(q.market_id, "sell", q.ask_size, q.ask, marks):
+                    setup = classify_trigger("sell", fair, tau_frac)
+                    if (not focus or setup in focus) and \
+                            mm.record_fill(q.market_id, "sell", q.ask_size, q.ask, marks):
                         fee = fee_per_side * q.ask * q.ask_size
                         mm.inv.realized_pnl -= fee
                         mm.inv.cash -= fee
                         fees_paid += fee
                         n_fills += 1
+                        if attribute:
+                            open_fills.setdefault(q.market_id, []).append(dict(
+                                side="sell", size=q.ask_size, price=q.ask,
+                                fair=fair, tau_frac=tau_frac, fee=fee, setup=setup))
 
         # Settle expired windows.
         expired = [mid for mid, m in active.items() if now >= m.resolve_at]
@@ -159,6 +196,8 @@ def run_backtest(bt: BacktestConfig | None = None,
             before = mm.inv.realized_pnl
             mm.settle(mid, outcome)
             per_window_pnl.append(mm.inv.realized_pnl - window_open_pnl[mid])
+            if attribute:
+                _attribute_fills(open_fills.pop(mid, []), outcome, trades)
             del active[mid]
 
         equity_curve.append(mm.inv.equity(result.fair))
@@ -169,6 +208,8 @@ def run_backtest(bt: BacktestConfig | None = None,
         outcome = 1.0 if final >= strikes[mid] else 0.0
         mm.settle(mid, outcome)
         per_window_pnl.append(mm.inv.realized_pnl - window_open_pnl[mid])
+        if attribute:
+            _attribute_fills(open_fills.pop(mid, []), outcome, trades)
 
     wins = sum(1 for p in per_window_pnl if p > 1e-9)
     graded = [p for p in per_window_pnl if abs(p) > 1e-9]
@@ -200,4 +241,5 @@ def run_backtest(bt: BacktestConfig | None = None,
         halt_reason=mm.risk.state.halt_reason,
         equity_curve=equity_curve,
         per_window_pnl=per_window_pnl,
+        trades=trades,
     )
